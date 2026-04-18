@@ -1,0 +1,129 @@
+Secure Coding Review Report
+
+
+1. Introduction
+
+Secure coding is the practice of writing software in a way that protects it from vulnerabilities and attacks. Insecure code can lead to serious risks such as data breaches, unauthorized access, and system compromise. This report presents a security review of a simple web application to identify vulnerabilities and recommend improvements.
+
+2. Selected Application
+Programming Language: Python
+Framework: Flask
+Application Type: Web-based Login System
+
+The application allows users to log in using a username and password. The code was intentionally kept simple to demonstrate common security issues.
+
+
+
+3. Code Reviewed
+
+The following vulnerable code was reviewed:
+
+from flask import Flask, request
+import sqlite3
+
+app = Flask(__name__)
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    query = f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"
+    cursor.execute(query)
+
+    user = cursor.fetchone()
+
+    if user:
+        return "Login successful"
+    else:
+        return "Invalid credentials"
+
+app.run(debug=True)
+
+
+
+4. Tools Used
+Bandit (Python Static Code Analyzer)
+Bandit was used to scan the application and identify common security issues such as unsafe SQL queries and insecure configurations.
+
+
+
+
+
+5. Vulnerabilities Identified
+
+5.1 SQL Injection
+Description: User input is directly embedded into the SQL query using string formatting.
+Risk: Attackers can manipulate the query to bypass authentication.
+Example Attack: ' OR '1'='1
+Impact: Unauthorized access to the system.
+
+5.2 Plaintext Password Handling
+Description: Passwords are stored and compared in plain text.
+Risk: If the database is compromised, all user passwords are exposed.
+Impact: High risk of account takeover.
+
+5.3 Debug Mode Enabled
+Description: The application is running with debug=True.
+Risk: Exposes internal error messages and system details.
+Impact: Helps attackers understand system structure.
+
+5.4 No Input Validation
+Description: User inputs are not validated or sanitized.
+Risk: Malicious input can be processed by the system.
+Impact: Can lead to injection and unexpected behavior.
+
+5.5 No Brute Force Protection
+Description: Unlimited login attempts are allowed.
+Risk: Attackers can repeatedly try different passwords.
+Impact: Increased risk of password guessing attacks.
+
+
+
+6. Recommendations and Best Practices
+Use parameterized queries to prevent SQL injection
+Store passwords using secure hashing algorithms (e.g., bcrypt)
+Disable debug mode in production
+Implement input validation and sanitization
+Add rate limiting or account lockout mechanisms
+Use HTTPS to secure data transmission
+Store sensitive data in environment variables
+
+
+
+
+7. Secure Code Implementation
+from flask import Flask, request
+import sqlite3
+from werkzeug.security import check_password_hash
+
+app = Flask(__name__)
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    query = "SELECT password FROM users WHERE username=?"
+    cursor.execute(query, (username,))
+    result = cursor.fetchone()
+
+    if result and check_password_hash(result[0], password):
+        return "Login successful"
+    else:
+        return "Invalid credentials"
+
+app.run(debug=False)
+
+
+
+
+8. Conclusion
+
+The secure coding review identified several critical vulnerabilities in the application, including SQL injection and insecure password handling. By applying recommended security practices such as parameterized queries and password hashing, the application can be significantly improved. Secure coding is essential to protect applications from modern cyber threats and ensure data safety.
